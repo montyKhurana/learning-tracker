@@ -2,8 +2,6 @@ import { Context } from '../../index';
 
 /**
  * Note Resolvers — Mutations and Field resolvers
- *
- * No root Query — notes are accessed through Topic.notes
  */
 
 const noteResolvers = {
@@ -32,10 +30,8 @@ const noteResolvers = {
   },
 
   Note: {
-    topic: async (parent: any, _args: unknown, context: Context) => {
-      return context.prisma.topic.findUnique({
-        where: { id: parent.topicId },
-      });
+    topic: (parent: any, _args: unknown, context: Context) => {
+      return context.loaders.topicById.load(parent.topicId);
     },
   },
 };

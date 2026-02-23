@@ -2,10 +2,15 @@ import { Context } from '../../index';
 
 /**
  * Course Resolvers — Queries, Mutations, and Field resolvers
+ *
+ * Field resolvers now use DataLoaders instead of direct Prisma calls.
+ * The Query and Mutation resolvers still use Prisma directly — DataLoaders
+ * are only for the nested field resolution where N+1 happens.
  */
 
 const courseResolvers = {
   Query: {
+    // Top-level queries still use Prisma directly — no N+1 here
     courses: async (_parent: unknown, _args: unknown, context: Context) => {
       return context.prisma.course.findMany();
     },
@@ -19,8 +24,6 @@ const courseResolvers = {
 
   Mutation: {
     createCourse: async (_parent: unknown, args: { input: any }, context: Context) => {
-      // In Phase 4, userId will come from the authenticated user in context.
-      // For now, grab the first user from the DB.
       const user = await context.prisma.user.findFirstOrThrow();
 
       return context.prisma.course.create({
@@ -35,7 +38,7 @@ const courseResolvers = {
     updateCourse: async (_parent: unknown, args: { id: string; input: any }, context: Context) => {
       return context.prisma.course.update({
         where: { id: args.id },
-        data: args.input,  // Only the fields the client sent get updated
+        data: args.input,
       });
     },
 
@@ -47,25 +50,19 @@ const courseResolvers = {
   },
 
   Course: {
-    user: async (parent: any, _args: unknown, context: Context) => {
-      return context.prisma.user.findUnique({
-        where: { id: parent.userId },
-      });
+    // BEFORE: context.prisma.user.findUnique({ where: { id: parent.userId } })
+    // AFTER:  context.loaders.userById.load(parent.userId)
+    // If 4 courses have the same userId, this fires ONE query instead of 4
+    user: (parent: any, _args: unknown, context: Context) => {
+      return context.loaders.userById.load(parent.userId);
     },
 
-    topics: async (parent: any, _args: unknown, context: Context) => {
-      return context.prisma.topic.findMany({
-        where: { courseId: parent.id },
-        orderBy: { order: 'asc' },
-      });
+    topics: (parent: any, _args: unknown, context: Context) => {
+      return context.loaders.topicsByCourseId.load(parent.id);
     },
 
-    tags: async (parent: any, _args: unknown, context: Context) => {
-      const courseTags = await context.prisma.courseTag.findMany({
-        where: { courseId: parent.id },
-        include: { tag: true },
-      });
-      return courseTags.map((ct: any) => ct.tag);
+    tags: (parent: any, _args: unknown, context: Context) => {
+      return context.loaders.tagsByCourseId.load(parent.id);
     },
   },
 };

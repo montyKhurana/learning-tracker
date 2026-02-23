@@ -19,7 +19,7 @@ const topicResolvers = {
         data: {
           title: args.input.title,
           courseId: args.input.courseId,
-          order: args.input.order ?? 0,  // Default to 0 if not provided
+          order: args.input.order ?? 0,
         },
       });
     },
@@ -39,22 +39,16 @@ const topicResolvers = {
   },
 
   Topic: {
-    course: async (parent: any, _args: unknown, context: Context) => {
-      return context.prisma.course.findUnique({
-        where: { id: parent.courseId },
-      });
+    course: (parent: any, _args: unknown, context: Context) => {
+      return context.loaders.courseById.load(parent.courseId);
     },
 
-    resources: async (parent: any, _args: unknown, context: Context) => {
-      return context.prisma.resource.findMany({
-        where: { topicId: parent.id },
-      });
+    resources: (parent: any, _args: unknown, context: Context) => {
+      return context.loaders.resourcesByTopicId.load(parent.id);
     },
 
-    notes: async (parent: any, _args: unknown, context: Context) => {
-      return context.prisma.note.findMany({
-        where: { topicId: parent.id },
-      });
+    notes: (parent: any, _args: unknown, context: Context) => {
+      return context.loaders.notesByTopicId.load(parent.id);
     },
   },
 };

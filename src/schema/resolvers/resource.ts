@@ -2,8 +2,6 @@ import { Context } from '../../index';
 
 /**
  * Resource Resolvers — Mutations and Field resolvers
- *
- * No root Query — resources are accessed through Topic.resources
  */
 
 const resourceResolvers = {
@@ -13,7 +11,7 @@ const resourceResolvers = {
         data: {
           title: args.input.title,
           url: args.input.url,
-          type: args.input.type ?? 'ARTICLE',  // Default to ARTICLE
+          type: args.input.type ?? 'ARTICLE',
           topicId: args.input.topicId,
         },
       });
@@ -34,10 +32,8 @@ const resourceResolvers = {
   },
 
   Resource: {
-    topic: async (parent: any, _args: unknown, context: Context) => {
-      return context.prisma.topic.findUnique({
-        where: { id: parent.topicId },
-      });
+    topic: (parent: any, _args: unknown, context: Context) => {
+      return context.loaders.topicById.load(parent.topicId);
     },
   },
 };
