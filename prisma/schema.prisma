@@ -1,0 +1,172 @@
+// Prisma Schema for Learning Tracker
+//
+// This defines our database tables, relationships, and constraints.
+// Prisma uses this to:
+// 1. Generate SQL migrations (prisma migrate dev)
+// 2. Generate a type-safe client (prisma generate)
+//
+// Key concepts:
+// - Each `model` becomes a database table
+// - `@id` marks the primary key
+// - `@default(uuid())` auto-generates UUIDs
+// - `@relation` defines foreign key relationships
+// - `@@map` renames the table in the database (Prisma model = PascalCase, DB table = snake_case)
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================================
+// USER — who is learning
+// ============================================================
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  name      String
+  password  String   // Will store bcrypt hash (Phase 4)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  courses Course[]
+
+  @@map("users")
+}
+
+// ============================================================
+// COURSE — what the user is learning (e.g. "GraphQL Mastery")
+// ============================================================
+model Course {
+  id          String       @id @default(uuid())
+  title       String
+  description String?
+  status      CourseStatus  @default(NOT_STARTED)
+  createdAt   DateTime     @default(now()) @map("created_at")
+  updatedAt   DateTime     @updatedAt @map("updated_at")
+
+  // Foreign key to User
+  userId String @map("user_id")
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Relations
+  topics    Topic[]
+  courseTags CourseTag[]
+
+  @@map("courses")
+}
+
+// ============================================================
+// TOPIC — sections within a course (e.g. "Schema Design", "Resolvers")
+// ============================================================
+model Topic {
+  id        String      @id @default(uuid())
+  title     String
+  order     Int         @default(0)    // For ordering topics within a course
+  status    TopicStatus @default(NOT_STARTED)
+  createdAt DateTime    @default(now()) @map("created_at")
+  updatedAt DateTime    @updatedAt @map("updated_at")
+
+  // Foreign key to Course
+  courseId String @map("course_id")
+  course  Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  // Relations
+  resources Resource[]
+  notes     Note[]
+
+  @@map("topics")
+}
+
+// ============================================================
+// RESOURCE — learning materials (articles, videos, docs, tutorials)
+// ============================================================
+model Resource {
+  id        String       @id @default(uuid())
+  title     String
+  url       String
+  type      ResourceType @default(ARTICLE)
+  createdAt DateTime     @default(now()) @map("created_at")
+  updatedAt DateTime     @updatedAt @map("updated_at")
+
+  // Foreign key to Topic
+  topicId String @map("topic_id")
+  topic   Topic  @relation(fields: [topicId], references: [id], onDelete: Cascade)
+
+  @@map("resources")
+}
+
+// ============================================================
+// NOTE — user's personal notes on a topic
+// ============================================================
+model Note {
+  id        String   @id @default(uuid())
+  content   String
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Foreign key to Topic
+  topicId String @map("topic_id")
+  topic   Topic  @relation(fields: [topicId], references: [id], onDelete: Cascade)
+
+  @@map("notes")
+}
+
+// ============================================================
+// TAG — labels for courses (e.g. "backend", "graphql", "typescript")
+// Many-to-many: A course can have many tags, a tag can be on many courses
+// ============================================================
+model Tag {
+  id   String @id @default(uuid())
+  name String @unique
+
+  // Relations
+  courseTags CourseTag[]
+
+  @@map("tags")
+}
+
+// ============================================================
+// COURSETAG — join table for many-to-many Course <-> Tag
+//
+// Why explicit join table instead of Prisma's implicit many-to-many?
+// - More control over the relationship
+// - Can add extra fields later (e.g. who added the tag, when)
+// - Industry standard practice
+// ============================================================
+model CourseTag {
+  courseId String @map("course_id")
+  tagId   String @map("tag_id")
+
+  course Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  tag    Tag    @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([courseId, tagId])  // Composite primary key
+  @@map("course_tags")
+}
+
+// ============================================================
+// ENUMS
+// ============================================================
+enum CourseStatus {
+  NOT_STARTED
+  IN_PROGRESS
+  COMPLETED
+}
+
+enum TopicStatus {
+  NOT_STARTED
+  IN_PROGRESS
+  COMPLETED
+}
+
+enum ResourceType {
+  ARTICLE
+  VIDEO
+  DOCUMENTATION
+  TUTORIAL
+}
