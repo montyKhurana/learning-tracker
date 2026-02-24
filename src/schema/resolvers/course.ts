@@ -1,16 +1,15 @@
 import { Context } from '../../index';
+import { requireAuth } from '../../auth/utils';
 
 /**
  * Course Resolvers — Queries, Mutations, and Field resolvers
  *
- * Field resolvers now use DataLoaders instead of direct Prisma calls.
- * The Query and Mutation resolvers still use Prisma directly — DataLoaders
- * are only for the nested field resolution where N+1 happens.
+ * Mutations require authentication — context.user must exist.
+ * Queries remain public for now (Phase 5 will add ownership checks).
  */
 
 const courseResolvers = {
   Query: {
-    // Top-level queries still use Prisma directly — no N+1 here
     courses: async (_parent: unknown, _args: unknown, context: Context) => {
       return context.prisma.course.findMany();
     },
@@ -24,7 +23,7 @@ const courseResolvers = {
 
   Mutation: {
     createCourse: async (_parent: unknown, args: { input: any }, context: Context) => {
-      const user = await context.prisma.user.findFirstOrThrow();
+      const user = requireAuth(context);
 
       return context.prisma.course.create({
         data: {
@@ -36,6 +35,7 @@ const courseResolvers = {
     },
 
     updateCourse: async (_parent: unknown, args: { id: string; input: any }, context: Context) => {
+      requireAuth(context);
       return context.prisma.course.update({
         where: { id: args.id },
         data: args.input,
@@ -43,6 +43,7 @@ const courseResolvers = {
     },
 
     deleteCourse: async (_parent: unknown, args: { id: string }, context: Context) => {
+      requireAuth(context);
       return context.prisma.course.delete({
         where: { id: args.id },
       });
@@ -50,9 +51,6 @@ const courseResolvers = {
   },
 
   Course: {
-    // BEFORE: context.prisma.user.findUnique({ where: { id: parent.userId } })
-    // AFTER:  context.loaders.userById.load(parent.userId)
-    // If 4 courses have the same userId, this fires ONE query instead of 4
     user: (parent: any, _args: unknown, context: Context) => {
       return context.loaders.userById.load(parent.userId);
     },

@@ -1,3 +1,4 @@
+import authResolvers from './auth';
 import courseResolvers from './course';
 import topicResolvers from './topic';
 import userResolvers from './user';
@@ -22,6 +23,7 @@ const resolvers = {
   },
 
   Mutation: {
+    ...authResolvers.Mutation,
     ...courseResolvers.Mutation,
     ...topicResolvers.Mutation,
     ...resourceResolvers.Mutation,

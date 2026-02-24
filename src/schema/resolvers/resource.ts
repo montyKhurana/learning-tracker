@@ -1,4 +1,5 @@
 import { Context } from '../../index';
+import { requireAuth } from '../../auth/utils';
 
 /**
  * Resource Resolvers — Mutations and Field resolvers
@@ -7,6 +8,7 @@ import { Context } from '../../index';
 const resourceResolvers = {
   Mutation: {
     createResource: async (_parent: unknown, args: { input: any }, context: Context) => {
+      requireAuth(context);
       return context.prisma.resource.create({
         data: {
           title: args.input.title,
@@ -18,6 +20,7 @@ const resourceResolvers = {
     },
 
     updateResource: async (_parent: unknown, args: { id: string; input: any }, context: Context) => {
+      requireAuth(context);
       return context.prisma.resource.update({
         where: { id: args.id },
         data: args.input,
@@ -25,6 +28,7 @@ const resourceResolvers = {
     },
 
     deleteResource: async (_parent: unknown, args: { id: string }, context: Context) => {
+      requireAuth(context);
       return context.prisma.resource.delete({
         where: { id: args.id },
       });

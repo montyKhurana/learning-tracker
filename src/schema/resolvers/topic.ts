@@ -1,4 +1,5 @@
 import { Context } from '../../index';
+import { requireAuth } from '../../auth/utils';
 
 /**
  * Topic Resolvers — Queries, Mutations, and Field resolvers
@@ -15,6 +16,7 @@ const topicResolvers = {
 
   Mutation: {
     createTopic: async (_parent: unknown, args: { input: any }, context: Context) => {
+      requireAuth(context);
       return context.prisma.topic.create({
         data: {
           title: args.input.title,
@@ -25,6 +27,7 @@ const topicResolvers = {
     },
 
     updateTopic: async (_parent: unknown, args: { id: string; input: any }, context: Context) => {
+      requireAuth(context);
       return context.prisma.topic.update({
         where: { id: args.id },
         data: args.input,
@@ -32,6 +35,7 @@ const topicResolvers = {
     },
 
     deleteTopic: async (_parent: unknown, args: { id: string }, context: Context) => {
+      requireAuth(context);
       return context.prisma.topic.delete({
         where: { id: args.id },
       });

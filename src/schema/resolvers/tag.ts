@@ -1,4 +1,5 @@
 import { Context } from '../../index';
+import { requireAuth } from '../../auth/utils';
 
 /**
  * Tag Resolvers — Queries, Mutations, and Field resolvers
@@ -19,6 +20,7 @@ const tagResolvers = {
       args: { courseId: string; tagName: string },
       context: Context
     ) => {
+      requireAuth(context);
       const tag = await context.prisma.tag.upsert({
         where: { name: args.tagName },
         update: {},
@@ -49,6 +51,7 @@ const tagResolvers = {
       args: { courseId: string; tagId: string },
       context: Context
     ) => {
+      requireAuth(context);
       await context.prisma.courseTag.delete({
         where: {
           courseId_tagId: {

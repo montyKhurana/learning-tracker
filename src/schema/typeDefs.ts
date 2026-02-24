@@ -137,6 +137,28 @@ const typeDefs = `#graphql
   # - Update: everything is optional (you might only want to change the status)
   # ============================================================
 
+  # --- Auth Types ---
+  # AuthPayload returns both the token AND the user.
+  # This way, after signup/login, the client has everything it needs:
+  # - The token to store and send with future requests
+  # - The user data to display immediately (no second query needed)
+  type AuthPayload {
+    token: String!
+    user: User!
+  }
+
+  # --- Auth Inputs ---
+  input SignupInput {
+    email: String!
+    password: String!
+    name: String!
+  }
+
+  input LoginInput {
+    email: String!
+    password: String!
+  }
+
   # --- Course Inputs ---
   input CreateCourseInput {
     title: String!
@@ -195,6 +217,10 @@ const typeDefs = `#graphql
   # ============================================================
 
   type Mutation {
+    # --- Auth ---
+    signup(input: SignupInput!): AuthPayload!
+    login(input: LoginInput!): AuthPayload!
+
     # --- Course ---
     createCourse(input: CreateCourseInput!): Course!
     updateCourse(id: ID!, input: UpdateCourseInput!): Course!
