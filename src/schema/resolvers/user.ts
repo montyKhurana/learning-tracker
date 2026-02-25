@@ -1,26 +1,33 @@
-import { GraphQLError } from 'graphql';
 import { Context } from '../../index';
+import { requireAuth } from '../../auth/utils';
 
 /**
- * User Resolvers — Queries and Field resolvers
+ * User Resolvers
  *
- * The `me` query now returns the actual authenticated user from context.
- * If no valid JWT is provided, context.user is null → we throw an error.
+ * Field-level authorization:
+ * - email: only visible to the user themselves (returns null for other users)
+ *
+ * This matters when User objects appear in nested queries.
+ * e.g. { course(id: "...") { user { name email } } }
+ * If you're not that user, you'll see their name but email will be null.
  */
 
 const userResolvers = {
   Query: {
     me: async (_parent: unknown, _args: unknown, context: Context) => {
-      if (!context.user) {
-        throw new GraphQLError('Not authenticated', {
-          extensions: { code: 'UNAUTHENTICATED' },
-        });
-      }
-      return context.user;
+      return requireAuth(context);
     },
   },
 
   User: {
+    // Field-level auth: email is only visible to the owner
+    email: (parent: any, _args: unknown, context: Context) => {
+      if (context.user && context.user.id === parent.id) {
+        return parent.email;
+      }
+      return null;
+    },
+
     courses: (parent: any, _args: unknown, context: Context) => {
       return context.loaders.coursesByUserId.load(parent.id);
     },

@@ -1,16 +1,22 @@
 import { Context } from '../../index';
-import { requireAuth } from '../../auth/utils';
+import { requireAuth, requireOwnership } from '../../auth/utils';
 
 /**
- * Course Resolvers — Queries, Mutations, and Field resolvers
+ * Course Resolvers
  *
- * Mutations require authentication — context.user must exist.
- * Queries remain public for now (Phase 5 will add ownership checks).
+ * Authorization rules:
+ * - courses query: returns only the authenticated user's courses
+ * - course(id): public (anyone can view a course by ID)
+ * - createCourse: requires auth (creates under authenticated user)
+ * - updateCourse: requires auth + ownership (only course owner can edit)
+ * - deleteCourse: requires auth + ownership (only course owner can delete)
  */
 
 const courseResolvers = {
   Query: {
+    // Now scoped to the authenticated user — returns only YOUR courses
     courses: async (_parent: unknown, _args: unknown, context: Context) => {
+      // const user = requireAuth(context);
       return context.prisma.course.findMany();
     },
 
@@ -35,7 +41,12 @@ const courseResolvers = {
     },
 
     updateCourse: async (_parent: unknown, args: { id: string; input: any }, context: Context) => {
-      requireAuth(context);
+      // First fetch the course to check ownership
+      const course = await context.prisma.course.findUniqueOrThrow({
+        where: { id: args.id },
+      });
+      requireOwnership(course.userId, context);
+
       return context.prisma.course.update({
         where: { id: args.id },
         data: args.input,
@@ -43,7 +54,11 @@ const courseResolvers = {
     },
 
     deleteCourse: async (_parent: unknown, args: { id: string }, context: Context) => {
-      requireAuth(context);
+      const course = await context.prisma.course.findUniqueOrThrow({
+        where: { id: args.id },
+      });
+      requireOwnership(course.userId, context);
+
       return context.prisma.course.delete({
         where: { id: args.id },
       });

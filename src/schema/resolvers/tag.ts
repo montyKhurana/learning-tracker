@@ -1,8 +1,10 @@
 import { Context } from '../../index';
-import { requireAuth } from '../../auth/utils';
+import { requireOwnership } from '../../auth/utils';
 
 /**
- * Tag Resolvers — Queries, Mutations, and Field resolvers
+ * Tag Resolvers
+ *
+ * Ownership: tags are added/removed from courses, so we check course ownership.
  */
 
 const tagResolvers = {
@@ -20,7 +22,12 @@ const tagResolvers = {
       args: { courseId: string; tagName: string },
       context: Context
     ) => {
-      requireAuth(context);
+      // Verify the user owns this course before adding a tag
+      const course = await context.prisma.course.findUniqueOrThrow({
+        where: { id: args.courseId },
+      });
+      requireOwnership(course.userId, context);
+
       const tag = await context.prisma.tag.upsert({
         where: { name: args.tagName },
         update: {},
@@ -51,7 +58,11 @@ const tagResolvers = {
       args: { courseId: string; tagId: string },
       context: Context
     ) => {
-      requireAuth(context);
+      const course = await context.prisma.course.findUniqueOrThrow({
+        where: { id: args.courseId },
+      });
+      requireOwnership(course.userId, context);
+
       await context.prisma.courseTag.delete({
         where: {
           courseId_tagId: {

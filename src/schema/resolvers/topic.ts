@@ -1,8 +1,11 @@
 import { Context } from '../../index';
-import { requireAuth } from '../../auth/utils';
+import { requireAuth, requireOwnership } from '../../auth/utils';
 
 /**
- * Topic Resolvers — Queries, Mutations, and Field resolvers
+ * Topic Resolvers
+ *
+ * Ownership: Topic belongs to a Course, which belongs to a User.
+ * To check ownership, we look up the parent course and verify course.userId.
  */
 
 const topicResolvers = {
@@ -16,7 +19,12 @@ const topicResolvers = {
 
   Mutation: {
     createTopic: async (_parent: unknown, args: { input: any }, context: Context) => {
-      requireAuth(context);
+      // Verify the user owns the course they're adding a topic to
+      const course = await context.prisma.course.findUniqueOrThrow({
+        where: { id: args.input.courseId },
+      });
+      requireOwnership(course.userId, context);
+
       return context.prisma.topic.create({
         data: {
           title: args.input.title,
@@ -27,7 +35,13 @@ const topicResolvers = {
     },
 
     updateTopic: async (_parent: unknown, args: { id: string; input: any }, context: Context) => {
-      requireAuth(context);
+      // Topic → Course → check userId
+      const topic = await context.prisma.topic.findUniqueOrThrow({
+        where: { id: args.id },
+        include: { course: true },
+      });
+      requireOwnership(topic.course.userId, context);
+
       return context.prisma.topic.update({
         where: { id: args.id },
         data: args.input,
@@ -35,7 +49,12 @@ const topicResolvers = {
     },
 
     deleteTopic: async (_parent: unknown, args: { id: string }, context: Context) => {
-      requireAuth(context);
+      const topic = await context.prisma.topic.findUniqueOrThrow({
+        where: { id: args.id },
+        include: { course: true },
+      });
+      requireOwnership(topic.course.userId, context);
+
       return context.prisma.topic.delete({
         where: { id: args.id },
       });

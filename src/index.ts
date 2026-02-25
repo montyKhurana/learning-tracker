@@ -23,9 +23,7 @@ export interface Context {
   user: User | null;
 }
 
-const prisma = new PrismaClient({
-  log: ['query'],
-});
+const prisma = new PrismaClient();
 
 async function startServer() {
   const app = express();

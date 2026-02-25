@@ -1,14 +1,23 @@
 import { Context } from '../../index';
-import { requireAuth } from '../../auth/utils';
+import { requireOwnership } from '../../auth/utils';
 
 /**
- * Resource Resolvers — Mutations and Field resolvers
+ * Resource Resolvers
+ *
+ * Ownership chain: Resource → Topic → Course → User
+ * We walk up two levels to verify ownership.
  */
 
 const resourceResolvers = {
   Mutation: {
     createResource: async (_parent: unknown, args: { input: any }, context: Context) => {
-      requireAuth(context);
+      // Topic → Course → check userId
+      const topic = await context.prisma.topic.findUniqueOrThrow({
+        where: { id: args.input.topicId },
+        include: { course: true },
+      });
+      requireOwnership(topic.course.userId, context);
+
       return context.prisma.resource.create({
         data: {
           title: args.input.title,
@@ -20,7 +29,13 @@ const resourceResolvers = {
     },
 
     updateResource: async (_parent: unknown, args: { id: string; input: any }, context: Context) => {
-      requireAuth(context);
+      // Resource → Topic → Course → check userId
+      const resource = await context.prisma.resource.findUniqueOrThrow({
+        where: { id: args.id },
+        include: { topic: { include: { course: true } } },
+      });
+      requireOwnership(resource.topic.course.userId, context);
+
       return context.prisma.resource.update({
         where: { id: args.id },
         data: args.input,
@@ -28,7 +43,12 @@ const resourceResolvers = {
     },
 
     deleteResource: async (_parent: unknown, args: { id: string }, context: Context) => {
-      requireAuth(context);
+      const resource = await context.prisma.resource.findUniqueOrThrow({
+        where: { id: args.id },
+        include: { topic: { include: { course: true } } },
+      });
+      requireOwnership(resource.topic.course.userId, context);
+
       return context.prisma.resource.delete({
         where: { id: args.id },
       });
