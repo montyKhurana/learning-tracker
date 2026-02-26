@@ -42,6 +42,72 @@ const typeDefs = `#graphql
     TUTORIAL
   }
 
+  enum SortOrder {
+    ASC
+    DESC
+  }
+
+  # ============================================================
+  # PAGINATION TYPES — Relay-style cursor-based pagination
+  # ============================================================
+
+  type PageInfo {
+    hasNextPage: Boolean!
+    hasPreviousPage: Boolean!
+    startCursor: String
+    endCursor: String
+  }
+
+  type CourseEdge {
+    cursor: String!
+    node: Course!
+  }
+
+  type CourseConnection {
+    edges: [CourseEdge!]!
+    pageInfo: PageInfo!
+    totalCount: Int!
+  }
+
+  type TopicEdge {
+    cursor: String!
+    node: Topic!
+  }
+
+  type TopicConnection {
+    edges: [TopicEdge!]!
+    pageInfo: PageInfo!
+    totalCount: Int!
+  }
+
+  type ResourceEdge {
+    cursor: String!
+    node: Resource!
+  }
+
+  type ResourceConnection {
+    edges: [ResourceEdge!]!
+    pageInfo: PageInfo!
+    totalCount: Int!
+  }
+
+  # ============================================================
+  # FILTER INPUTS — for paginated queries
+  # ============================================================
+
+  input CourseFilter {
+    status: CourseStatus
+    titleContains: String
+  }
+
+  input TopicFilter {
+    status: TopicStatus
+  }
+
+  input ResourceFilter {
+    type: ResourceType
+  }
+
   # ============================================================
   # TYPES — the shape of data returned by queries
   # ============================================================
@@ -64,6 +130,7 @@ const typeDefs = `#graphql
     updatedAt: String!
     user: User!
     topics: [Topic!]!
+    topicsConnection(first: Int, after: String, filter: TopicFilter, sortOrder: SortOrder): TopicConnection!
     tags: [Tag!]!
   }
 
@@ -76,6 +143,7 @@ const typeDefs = `#graphql
     updatedAt: String!
     course: Course!
     resources: [Resource!]!
+    resourcesConnection(first: Int, after: String, filter: ResourceFilter, sortOrder: SortOrder): ResourceConnection!
     notes: [Note!]!
   }
 
@@ -115,6 +183,7 @@ const typeDefs = `#graphql
 
     # Courses
     courses: [Course!]!             # All courses (will be scoped to user in Phase 4)
+    coursesConnection(first: Int, after: String, filter: CourseFilter, sortOrder: SortOrder): CourseConnection!
     course(id: ID!): Course         # Single course by ID (nullable — returns null if not found)
 
     # Topics

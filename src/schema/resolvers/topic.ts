@@ -1,5 +1,6 @@
 import { Context } from '../../index';
 import { requireAuth, requireOwnership } from '../../auth/utils';
+import { PaginationArgs, clampFirst, decodeCursor, buildConnection } from '../../utils/pagination';
 
 /**
  * Topic Resolvers
@@ -68,6 +69,36 @@ const topicResolvers = {
 
     resources: (parent: any, _args: unknown, context: Context) => {
       return context.loaders.resourcesByTopicId.load(parent.id);
+    },
+
+    resourcesConnection: async (
+      parent: any,
+      args: PaginationArgs & { filter?: { type?: string }; sortOrder?: string },
+      context: Context,
+    ) => {
+      const first = clampFirst(args.first);
+      const orderDirection = args.sortOrder === 'ASC' ? 'asc' : 'desc';
+
+      const where: any = { topicId: parent.id };
+      if (args.filter?.type) {
+        where.type = args.filter.type;
+      }
+      if (args.after) {
+        const cursorDate = decodeCursor(args.after);
+        where.createdAt = orderDirection === 'desc' ? { lt: cursorDate } : { gt: cursorDate };
+      }
+
+      const [items, totalCount] = await Promise.all([
+        context.prisma.resource.findMany({
+          where,
+          orderBy: { createdAt: orderDirection },
+          take: first + 1,
+        }),
+        context.prisma.resource.count({ where: { ...where, createdAt: undefined } }),
+      ]);
+
+      const hasPreviousPage = !!args.after;
+      return buildConnection(items, first, totalCount, hasPreviousPage);
     },
 
     notes: (parent: any, _args: unknown, context: Context) => {

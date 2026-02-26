@@ -57,6 +57,7 @@ model Course {
   topics    Topic[]
   courseTags CourseTag[]
 
+  @@index([createdAt])
   @@map("courses")
 }
 
@@ -79,6 +80,7 @@ model Topic {
   resources Resource[]
   notes     Note[]
 
+  @@index([courseId, createdAt])
   @@map("topics")
 }
 
@@ -97,6 +99,7 @@ model Resource {
   topicId String @map("topic_id")
   topic   Topic  @relation(fields: [topicId], references: [id], onDelete: Cascade)
 
+  @@index([topicId, createdAt])
   @@map("resources")
 }
 
